@@ -1,0 +1,110 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// --- ENUMS ---
+enum ReminderStatus {
+  PENDING
+  CALLED
+  MISSED
+  COMPLETED
+}
+
+enum CallStatus {
+  INITIATED
+  RINGING
+  ANSWERED
+  NO_ANSWER
+  FAILED
+}
+
+// --- MODELS ---
+
+model User {
+  id        String   @id @default(uuid())
+  phone     String   @unique
+  name      String?
+  age       Int?
+  createdAt DateTime @default(now())
+
+  todos      Todo[]
+  pushTokens PushToken[]
+  otps       OtpLog[]
+
+  @@index([phone])
+}
+
+model OtpLog {
+  id        String   @id @default(uuid())
+  phone     String
+  otpHash   String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id])
+
+  @@index([phone])
+  @@index([expiresAt])
+}
+
+model Todo {
+  id          String    @id @default(uuid())
+  userId      String
+  title       String
+  description String?
+  dueAt       DateTime?
+  completed   Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+
+  user      User       @relation(fields: [userId], references: [id])
+  reminders Reminder[]
+
+  @@index([userId])
+  @@index([dueAt])
+}
+
+model Reminder {
+  id         String         @id @default(uuid())
+  todoId     String
+  callTime   DateTime
+  status     ReminderStatus @default(PENDING)
+  retryCount Int            @default(0)
+  createdAt  DateTime       @default(now())
+
+  todo     Todo      @relation(fields: [todoId], references: [id])
+  callLogs CallLog[]
+
+  @@index([callTime])
+  @@index([status])
+}
+
+model CallLog {
+  id         String     @id @default(uuid())
+  reminderId String
+  callStatus CallStatus
+  createdAt  DateTime   @default(now())
+
+  reminder Reminder @relation(fields: [reminderId], references: [id])
+
+  @@index([reminderId])
+}
+
+model PushToken {
+  id        String   @id @default(uuid())
+  userId    String
+  token     String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@unique([userId, token])
+  @@index([userId])
+}
