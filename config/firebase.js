@@ -3,27 +3,38 @@ import path from 'path';
 import 'dotenv/config';
 import logger from './logger.js';
 
-// Ensure you provide the path to your service account json in .env
-// e.g FIREBASE_SERVICE_ACCOUNT_PATH=./config/firebase-admin-sdk.json
+// Provide EITHER the direct values in .env (recommended for Render/Cloud)
+const projectId = process.env.FIREBASE_PROJECT_ID;
+const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+// Replace literal \n with actual newlines for private key parsing
+const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n');
+
+// OR provide a file path
 const serviceAccountPath = process.env.FIREBASE_SERVICE_ACCOUNT_PATH
   ? path.resolve(process.env.FIREBASE_SERVICE_ACCOUNT_PATH)
   : null;
 
-if (serviceAccountPath) {
-  try {
+try {
+  if (projectId && clientEmail && privateKey) {
+    admin.initializeApp({
+      credential: admin.credential.cert({
+        projectId,
+        clientEmail,
+        privateKey
+      })
+    });
+    logger.info("Firebase Admin Initialized Successfully via Environment Variables");
+  } else if (serviceAccountPath) {
     admin.initializeApp({
       credential: admin.credential.cert(serviceAccountPath)
     });
-    logger.info("Firebase Admin Initialized Successfully");
-  } catch (error) {
-    logger.error("Firebase Admin Initialization Error", { error });
-  }
-} else {
-  logger.warn("WARN: FIREBASE_SERVICE_ACCOUNT_PATH is not set in .env. Firebase auth verification will fail.");
-  // Initialize without credentials just so the object exists (for testing without crash)
-  try {
+    logger.info("Firebase Admin Initialized Successfully via JSON File");
+  } else {
+    logger.warn("WARN: Firebase credentials not found in env. Setting dummy initializeApp. Firebase auth will fail.");
     admin.initializeApp();
-  } catch (e) { }
+  }
+} catch (error) {
+  logger.error("Firebase Admin Initialization Error", { error });
 }
 
 export default admin;
