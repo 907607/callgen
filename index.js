@@ -13,7 +13,6 @@ import cors from "cors";
 import morgan from "morgan";
 import logger from "./config/logger.js";
 import { globalErrorHandler } from "./middleware/error.middleware.js";
-const os = require("os");
 
 dotenv.config();
 const app = express();
@@ -36,16 +35,10 @@ app.get("/health", (req, res) => {
     status: "ok",
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
-    cpu: os.loadavg(),
     memory: {
       used: process.memoryUsage().heapUsed,
       total: process.memoryUsage().heapTotal
     },
-    system: {
-      cpus: os.cpus().length,
-      freeMemory: os.freemem(),
-      totalMemory: os.totalmem()
-    }
   });
 });
 
